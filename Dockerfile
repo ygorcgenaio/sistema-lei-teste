@@ -48,8 +48,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/database ./database
 COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
-RUN chown -R nextjs:nodejs /app
-
 USER nextjs
 
 EXPOSE 3000
