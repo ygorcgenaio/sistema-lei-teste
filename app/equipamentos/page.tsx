@@ -72,7 +72,7 @@ export default async function EquipamentosPage({
         {/* Cabeçalho e Filtro por Categoria */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-blue-800">Inventário Geral - LEI</h1>
+            <h1 className="text-3xl font-bold text-blue-800">Inventário Geral</h1>
             <p className="text-gray-600">Gestão centralizada de equipamentos, móveis e eletrodomésticos</p>
           </div>
 

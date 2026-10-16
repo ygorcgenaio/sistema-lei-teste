@@ -22,7 +22,7 @@ export default async function EmprestimosPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-blue-800">Gestão de Empréstimos</h1>
-            <p className="text-gray-600">Controlo de requisições e devoluções de equipamentos</p>
+            <p className="text-gray-600">Controle de requisições e devoluções de equipamentos</p>
           </div>
           
           <div className="flex gap-3">

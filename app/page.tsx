@@ -48,8 +48,8 @@ export default async function Home() {
         {/* Cabeçalho com identificação do Usuário e Logout */}
         <header className="flex justify-between items-center mb-8 bg-white p-6 rounded-lg shadow">
           <div>
-            <h1 className="text-3xl font-bold text-blue-800">Sistema LEI</h1>
-            <p className="text-gray-600 text-sm">Controle de Empréstimos, Manutenção e Inventário</p>
+            <h1 className="text-3xl font-bold text-blue-800">SiGPatri</h1>
+            <p className="text-gray-600 text-sm">Controle de equipamentos, empréstimos, manutenção e histórico patrimonial</p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right">
