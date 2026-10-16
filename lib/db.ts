@@ -18,4 +18,5 @@ if (process.env.DATABASE_URL) {
   });
 }
 
-export default pool;
+export const db = pool;
+export default db;
