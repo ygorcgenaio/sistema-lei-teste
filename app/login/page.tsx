@@ -86,7 +86,7 @@ export default async function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-xs text-gray-400">
-          Utilizador padrão: <span className="font-semibold text-gray-600">admin@lei.com</span> | Senha: <span className="font-semibold text-gray-600">admin123</span>
+          Acesso disponibilizado pela administração do LEI.
         </div>
       </div>
     </div>
