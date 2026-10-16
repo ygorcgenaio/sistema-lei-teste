@@ -50,8 +50,8 @@ export default async function LoginPage() {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-blue-800">Sistema LEI</h1>
-          <p className="text-gray-600 text-sm mt-1">Acesso Restrito ao Painel de Gestão</p>
+          <h1 className="text-3xl font-bold text-blue-800">SiGPatri</h1>
+          <p className="text-gray-600 text-sm mt-1">Sistema de Gestão Patrimonial</p>
         </div>
 
         <form action={autenticar} className="space-y-5">
@@ -61,7 +61,6 @@ export default async function LoginPage() {
               type="email"
               name="email"
               required
-              placeholder="admin@lei.com"
               className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
             />
           </div>
@@ -72,7 +71,6 @@ export default async function LoginPage() {
               type="password"
               name="senha"
               required
-              placeholder="••••••••"
               className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
             />
           </div>
