@@ -47,7 +47,7 @@ export default function DevolucaoModal({ isOpen, onClose, emprestimo }: Devoluca
         </p>
 
         <div className="bg-orange-50 border-l-4 border-orange-400 p-3 rounded text-sm text-orange-800">
-          <p><strong>Atenção:</strong> O status deste equipamento será alterado automaticamente para <strong>Revisão TI</strong> e sairá da lista de disponíveis.</p>
+          <p><strong>Atenção:</strong> O status deste equipamento será alterado automaticamente para <strong>inspeção pós-devolução</strong> e sairá da lista de disponíveis.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">

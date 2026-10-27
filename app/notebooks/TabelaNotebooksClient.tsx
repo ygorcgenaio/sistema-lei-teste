@@ -40,7 +40,7 @@ export default function TabelaNotebooksClient({ dadosIniciais }: { dadosIniciais
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patrimônio</th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código LEI</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Marca</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Modelo</th>
             <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">RAM</th>
@@ -80,12 +80,7 @@ export default function TabelaNotebooksClient({ dadosIniciais }: { dadosIniciais
                       <input form={formId} type="text" name="softwares_instalados" defaultValue={nb.softwares_instalados} placeholder="Ex: Office, AutoCAD" className={inputEstilo} />
                     </td>
                     <td className="px-2 py-2">
-                      <select form={formId} name="status_notebook" defaultValue={nb.status_notebook} className={inputEstilo}>
-                        <option value="DISPONIVEL">DISPONÍVEL</option>
-                        <option value="EMPRESTADO">EMPRESTADO</option>
-                        <option value="EM_MANUTENCAO">EM MANUTENÇÃO</option>
-                        <option value="REVISAO_TI">REVISÃO TI</option>
-                      </select>
+                      <span className="text-sm">{nb.status_notebook}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
                       <form id={formId} onSubmit={handleSalvarEdicao} className="flex items-center justify-end gap-3">

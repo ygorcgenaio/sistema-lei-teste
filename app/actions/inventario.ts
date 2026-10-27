@@ -1,83 +1,70 @@
 'use server';
-
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import type { ResultSetHeader } from 'mysql2';
 
+const texto = (form: FormData, chave: string) => String(form.get(chave) || '').trim();
+const opcional = (form: FormData, chave: string) => texto(form, chave) || null;
 export async function cadastrarItemAction(formData: FormData) {
-  const patrimonio_id = formData.get('patrimonio_id') as string;
-  const categoria = formData.get('categoria') as string;
-  const descricao = formData.get('descricao') as string;
-  const estado_conservacao = formData.get('estado_conservacao') as string;
-  const data_compra = formData.get('data_compra') as string;
-  const data_recebimento = formData.get('data_recebimento') as string;
-  const origem_recurso = formData.get('origem_recurso') as string;
-  const pdfFile = formData.get('pdf_file') as File;
-
-  let pdfUrl = null;
-
-  try {
-    // 1. VERIFICAÇÃO DE DUPLICIDADE
-    const [existente]: any = await db.query(
-      'SELECT patrimonio_id FROM inventario_lei WHERE patrimonio_id = ?',
-      [patrimonio_id]
-    );
-
-    if (existente && existente.length > 0) {
-      return { erro: `O patrimônio "${patrimonio_id}" já está cadastrado no sistema.` };
-    }
-
-    // 2. PROCESSAMENTO DO PDF DA NOTA FISCAL
-    if (pdfFile && pdfFile.size > 0) {
-      if (pdfFile.type !== 'application/pdf') {
-        return { erro: 'O arquivo enviado não é um PDF válido.' };
-      }
-
-      const maxSize = 5 * 1024 * 1024;
-      if (pdfFile.size > maxSize) {
-        return { erro: 'O PDF é muito grande. O limite é 5MB.' };
-      }
-
-      const bytes = await pdfFile.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-      await mkdir(uploadDir, { recursive: true });
-
-      const fileName = `${Date.now()}-${pdfFile.name.replace(/\s+/g, '_')}`;
-      const filePath = path.join(uploadDir, fileName);
-
-      await writeFile(filePath, buffer);
-      pdfUrl = `/uploads/${fileName}`;
-    }
-
-    // 3. INSERÇÃO NO INVENTÁRIO GERAL
-    await db.query(
-      `INSERT INTO inventario_lei 
-       (patrimonio_id, categoria, descricao, estado_conservacao, localizacao, status, data_compra, data_recebimento, origem_recurso, nota_fiscal_pdf)
-       VALUES (?, ?, ?, ?, 'LEI', 'ATIVO', ?, ?, ?, ?)`,
-      [patrimonio_id, categoria, descricao, estado_conservacao, data_compra, data_recebimento, origem_recurso, pdfUrl]
-    );
-
-    // 4. CRIAÇÃO AUTOMÁTICA DA FICHA TÉCNICA (SE FOR NOTEBOOK)
-    if (categoria === 'notebook') {
-      await db.query(
-        `INSERT INTO notebook 
-         (patrimonio_id, marca, modelo, memoria_ram, armazenamento, softwares_instalados, status_notebook)
-         VALUES (?, 'A preencher', 'A preencher', 'A preencher', 'A preencher', '', 'DISPONIVEL')`,
-        [patrimonio_id]
-      );
-    }
-
-    // Revalida ambas as páginas para que as listas atualizem imediatamente
-    revalidatePath('/equipamentos');
-    revalidatePath('/notebooks');
-    
-    return { sucesso: true };
-    
-  } catch (error) {
-    console.error('Erro ao cadastrar item:', error);
-    return { erro: 'Ocorreu um erro interno no servidor ao tentar salvar o item.' };
+  const codigo = texto(formData, 'codigo_lei');
+  const patrimonio = opcional(formData, 'patrimonio');
+  const categoria = Number(texto(formData, 'categoria_id'));
+  const tipo = Number(texto(formData, 'tipo_item_id'));
+  const descricao = texto(formData, 'descricao');
+  const conservacao = texto(formData, 'estado_conservacao') || 'BOM';
+  const status = texto(formData, 'status') || 'DISPONIVEL';
+  const origem = opcional(formData, 'origem_aquisicao');
+  const dataCompra = opcional(formData, 'data_compra');
+  const dataRecebimento = opcional(formData, 'data_recebimento_lei');
+  if (!codigo || !descricao || !Number.isInteger(categoria) || categoria <= 0 || !Number.isInteger(tipo) || tipo <= 0) return { erro: 'Preencha o código LEI, a descrição, a categoria e o tipo.' };
+  if (!['NOVO','BOM','REGULAR','RUIM'].includes(conservacao)) return { erro: 'Estado de conservação inválido.' };
+  if (!['DISPONIVEL','RESERVADO','EMPRESTADO','EM_MANUTENCAO','INSERVIVEL','BAIXADO'].includes(status)) return { erro: 'Status inválido.' };
+  if (origem && !['RECURSOS_UFF','RECURSOS_LEI','PROJETO','DOACAO','CESSAO','OUTRO'].includes(origem)) return { erro: 'Origem de aquisição inválida.' };
+  if ((dataCompra && !/^\d{4}-\d{2}-\d{2}$/.test(dataCompra)) || (dataRecebimento && !/^\d{4}-\d{2}-\d{2}$/.test(dataRecebimento)) || (dataCompra && dataRecebimento && dataRecebimento < dataCompra)) return { erro: 'Verifique as datas de compra e recebimento.' };
+  const arquivo = formData.get('pdf_file');
+  if (arquivo instanceof File && arquivo.size) {
+    if (arquivo.type !== 'application/pdf' || !arquivo.name.toLowerCase().endsWith('.pdf')) return { erro: 'Anexe somente arquivos PDF.' };
+    if (arquivo.size > 5 * 1024 * 1024) return { erro: 'O PDF deve ter até 5 MB.' };
   }
+  const conn = await db.getConnection();
+  let arquivoFisico: string | null = null;
+  try {
+    await conn.beginTransaction();
+    const [tipos]: any = await conn.query('SELECT id,nome FROM tipos_itens WHERE id=? AND categoria_id=? AND ativo=1', [tipo,categoria]);
+    if (!tipos.length) { await conn.rollback(); return { erro: 'Tipo inválido para a categoria selecionada.' }; }
+    let arquivoUrl: string | null = null;
+    if (arquivo instanceof File && arquivo.size) {
+      const pasta = path.join(process.cwd(),'public','uploads');
+      await mkdir(pasta,{recursive:true});
+      const nome = `${randomUUID()}.pdf`;
+      arquivoFisico = path.join(pasta,nome);
+      await writeFile(arquivoFisico, Buffer.from(await arquivo.arrayBuffer()));
+      arquivoUrl = `/uploads/${nome}`;
+    }
+    const [resultado] = await conn.execute<ResultSetHeader>(`INSERT INTO itens (codigo_lei,patrimonio,categoria_id,tipo_item_id,descricao,marca,modelo,numero_serie,data_compra,data_recebimento_lei,origem_aquisicao,projeto_origem,numero_nota_fiscal,arquivo_nota_fiscal,localizacao_atual,status,estado_conservacao,observacoes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, [codigo,patrimonio,categoria,tipo,descricao,opcional(formData,'marca'),opcional(formData,'modelo'),opcional(formData,'numero_serie'),dataCompra,dataRecebimento,origem,opcional(formData,'projeto_origem'),opcional(formData,'numero_nota_fiscal'),arquivoUrl,texto(formData,'localizacao_atual') || 'LEI',status,conservacao,opcional(formData,'observacoes')]);
+    if (['Notebook','Computador Desktop'].includes(tipos[0].nome)) {
+      await conn.execute('INSERT INTO itens_computadores (item_id,processador,memoria_ram,armazenamento,sistema_operacional) VALUES (?,?,?,?,?)',[resultado.insertId,opcional(formData,'processador'),opcional(formData,'memoria_ram'),opcional(formData,'armazenamento'),opcional(formData,'sistema_operacional')]);
+    }
+    await conn.commit();
+    revalidatePath('/itens'); revalidatePath('/notebooks'); revalidatePath('/');
+    return { sucesso: true };
+  } catch (e: any) {
+    await conn.rollback();
+    if (arquivoFisico) await unlink(arquivoFisico).catch(()=>{});
+    console.error('Erro ao cadastrar item:',e);
+    if (e?.code === 'ER_DUP_ENTRY') return { erro: 'Código LEI ou patrimônio já cadastrado.' };
+    return { erro: 'Erro ao salvar item. Confira os dados e os logs do servidor.' };
+  } finally { conn.release(); }
+}
+
+export async function baixarItemAction(formData: FormData) {
+  const id = Number(formData.get('item_id'));
+  if (!Number.isInteger(id) || id<=0 || String(formData.get('confirmacao')) !== 'LEI') return { erro: 'Confirmação inválida.' };
+  const [resultado] = await db.execute<ResultSetHeader>(`UPDATE itens SET status='BAIXADO' WHERE id=? AND status NOT IN ('EMPRESTADO','EM_MANUTENCAO','BAIXADO')`,[id]);
+  if (!resultado.affectedRows) return { erro: 'Não foi possível baixar este item. Verifique o status.' };
+  revalidatePath('/itens'); revalidatePath('/');
+  return { sucesso: true };
 }

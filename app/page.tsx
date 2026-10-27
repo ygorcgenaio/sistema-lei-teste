@@ -22,20 +22,20 @@ export default async function Home() {
   let totalManutencaoAndamento = 0;
 
   try {
-    const [rowsNb]: any = await db.query("SELECT COUNT(*) as total FROM inventario_lei WHERE status != 'DESATIVADO'");
+    const [rowsNb]: any = await db.query("SELECT COUNT(*) as total FROM itens WHERE status != 'BAIXADO'");
     totalobjetos = rowsNb[0].total;
 
     const [rowsPessoa]: any = await db.query('SELECT COUNT(*) as total FROM usuarios');
     totalPessoas = rowsPessoa[0].total;
 
     const [rowsEmp]: any = await db.query(
-      "SELECT COUNT(*) as total FROM emprestimos WHERE status_devolucao = 'EM_ANDAMENTO'"
+      "SELECT COUNT(*) as total FROM emprestimos_itens WHERE status_devolucao = 'EM_ANDAMENTO'"
     );
     totalEmprestimosAtivos = rowsEmp[0].total;
 
 
     const [rowsManutencao]: any = await db.query(
-      "SELECT COUNT(*) as total FROM manutencao WHERE status_manutencao != 'CONCLUIDO'"
+      "SELECT COUNT(*) as total FROM manutencoes_itens WHERE status_manutencao != 'CONCLUIDO'"
     );
     totalManutencaoAndamento = rowsManutencao[0].total;
   } catch (error) {
@@ -77,7 +77,7 @@ export default async function Home() {
             </div>
             
             <div className="mt-5 flex flex-col gap-3 border-t pt-3">
-              <a href="/equipamentos" className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors inline-flex items-center">
+              <a href="/itens" className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors inline-flex items-center">
                 Ver inventário &rarr;
               </a>
               <a href="/notebooks" className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors inline-flex items-center">
@@ -128,7 +128,7 @@ export default async function Home() {
               + Enviar p/ Manutenção
             </a>
             <a
-              href="/equipamentos/novo"
+              href="/itens/novo"
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded shadow hover:bg-gray-300 transition font-medium inline-block"
             >
               Cadastrar Notebook

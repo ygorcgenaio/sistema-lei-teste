@@ -48,7 +48,7 @@ export default function TabelaManutencaoClient({ manutencoes }: { manutencoes: a
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Património</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código LEI</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Entrada</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsável</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Diagnóstico / Reparo</th>

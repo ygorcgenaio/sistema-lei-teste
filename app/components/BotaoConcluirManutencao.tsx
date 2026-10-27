@@ -49,7 +49,7 @@ export default function BotaoConcluirManutencao({ manutencao }: Props) {
             <p className="text-sm text-gray-700">
               Descreva o reparo efetuado no equipamento <strong>{manutencao.patrimonio_id}</strong>. 
               <br/><br/>
-              Após concluir, o status retornará a "Ativo/Disponível". Se o item não tiver conserto, termine a manutenção aqui e depois desative-o no inventário geral.
+              Após concluir, o status retornará a "DISPONIVEL". Se o item não tiver conserto, termine a manutenção aqui e depois registre a situação adequada no inventário geral.
             </p>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-2">

@@ -1,29 +1,13 @@
 'use server';
-
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-
-export async function atualizarNotebookAction(formData: FormData) {
-  const patrimonio_id = formData.get('patrimonio_id') as string;
-  const marca = formData.get('marca') as string;
-  const modelo = formData.get('modelo') as string;
-  const memoria_ram = formData.get('memoria_ram') as string;
-  const armazenamento = formData.get('armazenamento') as string;
-  const softwares_instalados = formData.get('softwares_instalados') as string;
-  const status_notebook = formData.get('status_notebook') as string;
-
-  try {
-    await db.query(
-      `UPDATE notebook 
-       SET marca = ?, modelo = ?, memoria_ram = ?, armazenamento = ?, softwares_instalados = ?, status_notebook = ? 
-       WHERE patrimonio_id = ?`,
-      [marca, modelo, memoria_ram, armazenamento, softwares_instalados, status_notebook, patrimonio_id]
-    );
-    
-    revalidatePath('/notebooks');
-    return { sucesso: true };
-  } catch (error) {
-    console.error('Erro ao atualizar notebook:', error);
-    return { erro: 'Erro ao atualizar os dados do notebook.' };
-  }
+export async function atualizarNotebookAction(form:FormData){
+ const codigo=String(form.get('patrimonio_id')||'').trim();
+ try {
+ const [result]:any=await db.query('SELECT id FROM itens WHERE codigo_lei=?',[codigo]);
+ if(!result.length)return {erro:'Item não encontrado.'};
+ await db.query('UPDATE itens_computadores SET memoria_ram=?,armazenamento=?,softwares_instalados=? WHERE item_id=?',[String(form.get('memoria_ram')||'').trim()||null,String(form.get('armazenamento')||'').trim()||null,String(form.get('softwares_instalados')||'').trim()||null,result[0].id]);
+ await db.query('UPDATE itens SET marca=?,modelo=? WHERE id=?',[String(form.get('marca')||'').trim()||null,String(form.get('modelo')||'').trim()||null,result[0].id]);
+ revalidatePath('/notebooks');revalidatePath('/itens');return {sucesso:true};
+ }catch(e){console.error(e);return {erro:'Falha ao atualizar notebook.'}}
 }

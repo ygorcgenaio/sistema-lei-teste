@@ -44,7 +44,7 @@ export default function NovaManutencaoPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Patrimônio ID <span className="text-red-500">*</span></label>
-              <input type="text" name="patrimonio_id" required placeholder="Ex: PAT-001" className="w-full border border-gray-300 rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" name="patrimonio_id" required placeholder="Ex: NOTE LEI 001" className="w-full border border-gray-300 rounded p-2 text-sm outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
 
             <div>

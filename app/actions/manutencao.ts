@@ -1,75 +1,27 @@
 'use server';
-
 import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-
-// AÇÃO 1: Entrada manual em manutenção
-export async function criarManutencaoAction(formData: FormData) {
-  const patrimonio_id = formData.get('patrimonio_id') as string;
-  const responsavel = formData.get('responsavel') as string;
-  const diagnostico = formData.get('diagnostico') as string;
-
-  if (!patrimonio_id) return { erro: 'O Património é obrigatório.' };
-
-  try {
-    const [item]: any = await db.query(
-      'SELECT status FROM inventario_lei WHERE patrimonio_id = ?',
-      [patrimonio_id]
-    );
-
-    if (!item || item.length === 0) return { erro: 'Património não encontrado.' };
-    if (item[0].status === 'DESATIVADO') return { erro: 'Este item está desativado.' };
-
-    // Insere na tabela de manutenção
-    await db.query(
-      `INSERT INTO manutencao (patrimonio_id, responsavel, diagnostico, status_manutencao)
-       VALUES (?, ?, ?, 'EM_MANUTENCAO')`,
-      [patrimonio_id, responsavel || 'EQUIPE_TI', diagnostico || null]
-    );
-
-    // Bloqueia o item no inventário
-    await db.query("UPDATE inventario_lei SET status = 'EM_MANUTENCAO' WHERE patrimonio_id = ?", [patrimonio_id]);
-    await db.query("UPDATE notebook SET status_notebook = 'EM_MANUTENCAO' WHERE patrimonio_id = ?", [patrimonio_id]);
-
-    revalidatePath('/manutencao');
-    revalidatePath('/equipamentos');
-    revalidatePath('/notebooks');
-    
-    return { sucesso: true };
-  } catch (error) {
-    console.error('Erro ao criar manutenção:', error);
-    return { erro: 'Erro interno ao registar a manutenção.' };
-  }
+export async function criarManutencaoAction(form:FormData){
+ const codigo=String(form.get('patrimonio_id')||'').trim(),resp=String(form.get('responsavel')||'EQUIPE_TI'),diagnostico=String(form.get('diagnostico')||'').trim();
+ if(!codigo)return {erro:'Informe o código LEI.'};
+ if(!['EQUIPE_TI','AUTORIZADA','OUTRO'].includes(resp))return {erro:'Responsável inválido.'};
+ const conn=await db.getConnection();try{await conn.beginTransaction();
+ const [rows]:any=await conn.query('SELECT id,status FROM itens WHERE codigo_lei=? FOR UPDATE',[codigo]);
+ if(!rows.length){await conn.rollback();return {erro:'Item não encontrado.'};}
+ if(rows[0].status!=='DISPONIVEL'){await conn.rollback();return {erro:`Item indisponível: ${rows[0].status}`};}
+ await conn.query("INSERT INTO manutencoes_itens(item_id,responsavel,diagnostico) VALUES(?,?,?)",[rows[0].id,resp,diagnostico||null]);
+ await conn.query("UPDATE itens SET status='EM_MANUTENCAO' WHERE id=?",[rows[0].id]);await conn.commit();
+ for(const r of ['/itens','/manutencao','/'])revalidatePath(r);return {sucesso:true};
+ }catch(e){await conn.rollback();console.error(e);return {erro:'Erro ao registrar manutenção.'}}finally{conn.release()}
 }
-
-// AÇÃO 2: Terminar a manutenção e registar o reparo
-export async function concluirManutencaoAction(formData: FormData) {
-  const manutencao_id = formData.get('manutencao_id') as string;
-  const patrimonio_id = formData.get('patrimonio_id') as string;
-  const reparo_feito = formData.get('reparo_feito') as string;
-
-  if (!manutencao_id || !patrimonio_id) return { erro: 'Dados insuficientes.' };
-
-  try {
-    // 1. Encerra a manutenção e regista o reparo e a data de fim
-    await db.query(
-      `UPDATE manutencao 
-       SET status_manutencao = 'CONCLUIDO', data_fim = CURRENT_TIMESTAMP, reparo_feito = ? 
-       WHERE id = ?`,
-      [reparo_feito || 'Sem reparo especificado', manutencao_id]
-    );
-
-    // 2. Devolve o item ao status normal (se estiver estragado, o operador desativa-o depois no inventário)
-    await db.query("UPDATE inventario_lei SET status = 'ATIVO' WHERE patrimonio_id = ?", [patrimonio_id]);
-    await db.query("UPDATE notebook SET status_notebook = 'DISPONIVEL' WHERE patrimonio_id = ?", [patrimonio_id]);
-
-    revalidatePath('/manutencao');
-    revalidatePath('/equipamentos');
-    revalidatePath('/notebooks');
-
-    return { sucesso: true };
-  } catch (error) {
-    console.error('Erro ao concluir manutenção:', error);
-    return { erro: 'Erro interno ao processar a conclusão.' };
-  }
+export async function concluirManutencaoAction(form:FormData){
+ const id=Number(form.get('manutencao_id'));const codigo=String(form.get('patrimonio_id')||'').trim(),reparo=String(form.get('reparo_feito')||'').trim();
+ const conn=await db.getConnection();try{await conn.beginTransaction();
+ const [rows]:any=await conn.query("SELECT m.item_id FROM manutencoes_itens m JOIN itens i ON i.id=m.item_id WHERE m.id=? AND i.codigo_lei=? AND m.status_manutencao<>'CONCLUIDO' FOR UPDATE",[id,codigo]);
+ if(!rows.length){await conn.rollback();return {erro:'Manutenção não encontrada ou já concluída.'};}
+ await conn.query("UPDATE manutencoes_itens SET status_manutencao='CONCLUIDO',data_fim=NOW(),reparo_feito=? WHERE id=?",[reparo||'Sem reparo informado',id]);
+ const [abertas]:any=await conn.query("SELECT COUNT(*) AS total FROM manutencoes_itens WHERE item_id=? AND status_manutencao<>'CONCLUIDO'",[rows[0].item_id]);
+ if(Number(abertas[0].total)===0)await conn.query("UPDATE itens SET status='DISPONIVEL' WHERE id=? AND status='EM_MANUTENCAO'",[rows[0].item_id]);
+ await conn.commit();for(const r of ['/itens','/manutencao','/'])revalidatePath(r);return {sucesso:true};
+ }catch(e){await conn.rollback();console.error(e);return {erro:'Erro ao concluir manutenção.'}}finally{conn.release()}
 }

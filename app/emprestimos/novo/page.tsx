@@ -118,16 +118,16 @@ export default function NovoEmprestimoPage() {
 
           {/* BLOCO: EQUIPAMENTO */}
           <div className="bg-gray-50 p-4 rounded border border-gray-200">
-            <h2 className="text-sm font-bold text-gray-800 mb-3">2. Equipamento</h2>
+            <h2 className="text-sm font-bold text-gray-800 mb-3">2. Item</h2>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                ID do Patrimônio <span className="text-red-500">*</span>
+                Código LEI <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 name="patrimonio_id"
                 required
-                placeholder="Ex: PAT-00123"
+                placeholder="Ex: NOTE LEI 001"
                 className="w-full border border-gray-300 rounded p-2 text-sm text-black outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
