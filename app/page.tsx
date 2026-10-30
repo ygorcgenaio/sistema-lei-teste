@@ -1,20 +1,10 @@
 import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
+import { exigirUsuario } from '@/lib/auth/guard';
+import { logoutAction } from '@/app/actions/auth';
 
 export default async function Home() {
-  // LER SESSÃO DO USUÁRIO
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('lei_session');
-  const usuario = sessionCookie ? JSON.parse(sessionCookie.value) : null;
-
-  // FUNÇÃO DE LOGOUT
-  async function fazerLogout() {
-    'use server';
-    const cStore = await cookies();
-    cStore.delete('lei_session');
-    redirect('/login');
-  }
+  // SESSÃO: exige usuário logado e ATIVO (consulta o banco a cada acesso)
+  const usuario = await exigirUsuario();
 
   let totalobjetos = 0;
   let totalPessoas = 0;
@@ -54,9 +44,9 @@ export default async function Home() {
           <div className="flex items-center gap-4">
             <div className="text-right">
               <p className="text-xs text-gray-400">Usuário Autenticado</p>
-              <p className="text-sm font-semibold text-gray-800">{usuario?.nome || 'Administrador'}</p>
+              <p className="text-sm font-semibold text-gray-800">{usuario.nome}</p>
             </div>
-            <form action={fazerLogout}>
+            <form action={logoutAction}>
               <button
                 type="submit"
                 className="bg-red-500 text-white text-xs font-semibold px-3 py-2 rounded hover:bg-red-600 transition shadow"

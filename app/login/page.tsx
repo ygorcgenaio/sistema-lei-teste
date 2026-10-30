@@ -1,49 +1,27 @@
-import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { obterUsuarioAtual } from '@/lib/auth/guard';
+import BotaoGoogle from './BotaoGoogle';
+
+// Lê GOOGLE_CLIENT_ID e a sessão a cada requisição (e não só na hora do build).
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
-  async function autenticar(formData: FormData) {
-    'use server';
+  // Quem já está logado (e continua ativo) vai direto para o painel.
+  let jaLogado = false;
+  try {
+    jaLogado = (await obterUsuarioAtual()) !== null;
+  } catch (erro) {
+    console.error('[login] Não foi possível verificar a sessão atual:', erro);
+  }
 
-    const email = formData.get('email') as string;
-    const senha = formData.get('senha') as string;
-
-    try {
-      // Consulta o usuário no MariaDB
-      const [rows]: any = await db.query(
-        'SELECT * FROM usuarios WHERE email = ? AND senha = ?',
-        [email, senha]
-      );
-
-      if (rows.length === 0) {
-        // Credenciais inválidas
-        redirect('/login?erro=1');
-      }
-
-      const usuario = rows[0];
-
-      // Salva a sessão em um cookie HTTP-Only seguro
-      const cookieStore = await cookies();
-      cookieStore.set('lei_session', JSON.stringify({
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-      }), {
-        httpOnly: true,
-        path: '/',
-        maxAge: 60 * 60 * 8, // Sessão válida por 8 horas
-      });
-
-    } catch (error) {
-      if ((error as Error).message.includes('NEXT_REDIRECT')) {
-        throw error;
-      }
-      console.error('Erro no login:', error);
-      redirect('/login?erro=2');
-    }
-
+  if (jaLogado) {
     redirect('/');
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID ?? '';
+
+  if (!clientId) {
+    console.error('[login] GOOGLE_CLIENT_ID não configurado.');
   }
 
   return (
@@ -54,34 +32,28 @@ export default async function LoginPage() {
           <p className="text-gray-600 text-sm mt-1">Sistema de Gestão Patrimonial</p>
         </div>
 
-        <form action={autenticar} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
-            <input
-              type="email"
-              name="email"
-              required
-              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
-            />
-          </div>
+        <div className="text-center mb-6">
+          <h2 className="text-lg font-semibold text-gray-800">Acesso restrito</h2>
+          <p className="text-sm text-gray-600 mt-2">
+            Utilize sua conta Google institucional. O acesso ao SiGPatri é permitido somente a
+            usuários previamente autorizados.
+          </p>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-            <input
-              type="password"
-              name="senha"
-              required
-              className="w-full border border-gray-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition shadow"
+        {clientId ? (
+          <BotaoGoogle clientId={clientId} />
+        ) : (
+          <div
+            role="alert"
+            className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
           >
-            Entrar no Sistema
-          </button>
-        </form>
+            <p className="font-semibold">Não foi possível realizar a autenticação.</p>
+            <p className="mt-1">
+              Tente novamente. Caso o problema persista, entre em contato com a equipe responsável
+              pelo SiGPatri.
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 text-center text-xs text-gray-400">
           Acesso disponibilizado pela administração do LEI.

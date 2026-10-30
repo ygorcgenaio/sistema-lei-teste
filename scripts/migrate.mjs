@@ -105,22 +105,23 @@ async function applyMigrations(connection) {
 }
 
 async function ensureInitialAdmin(connection) {
-  const email = process.env.LEI_ADMIN_EMAIL?.trim();
-  const password = process.env.LEI_ADMIN_PASSWORD;
+  // O login é feito pelo Google (LEI-002): o administrador inicial é só um e-mail autorizado.
+  // Esse e-mail precisa ser o da conta Google que vai entrar no sistema. Não há senha.
+  const email = process.env.LEI_ADMIN_EMAIL?.trim().toLowerCase();
 
-  if (!email || !password) {
-    console.log('[db:migrate] LEI_ADMIN_EMAIL/LEI_ADMIN_PASSWORD não definidos; seed do administrador ignorado.');
+  if (!email) {
+    console.log('[db:migrate] LEI_ADMIN_EMAIL não definido; seed do administrador ignorado.');
     return;
   }
 
   const name = process.env.LEI_ADMIN_NAME?.trim() || 'Administrador LEI';
-  const registration = process.env.LEI_ADMIN_MATRICULA?.trim() || null;
-  const phone = process.env.LEI_ADMIN_TELEFONE?.trim() || null;
 
+  // INSERT IGNORE: se o e-mail já estiver cadastrado, nada é alterado
+  // (não redefine perfil nem reativa um usuário inativado).
   await connection.query(
-    `INSERT IGNORE INTO usuarios (nome, email, matricula, telefone, senha, role)
-     VALUES (?, ?, ?, ?, ?, 'ADMIN')`,
-    [name, email, registration, phone, password]
+    `INSERT IGNORE INTO usuarios_sistema (nome, email, perfil, ativo)
+     VALUES (?, ?, 'ADMINISTRADOR', TRUE)`,
+    [name, email]
   );
 
   console.log(`[db:migrate] Administrador inicial garantido para ${email}.`);

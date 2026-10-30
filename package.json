@@ -11,6 +11,8 @@
     "start:docker": "node scripts/migrate.mjs && node server.js"
   },
   "dependencies": {
+    "google-auth-library": "^11.3.1",
+    "jose": "^6.2.13",
     "mysql2": "^3.24.5",
     "next": "16.3.7",
     "react": "19.2.8",
